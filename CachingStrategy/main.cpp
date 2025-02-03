@@ -9,6 +9,7 @@
 
 #include "UseTemplate_LRU\ICachePolicy.h"
 #include "UseTemplate_LRU\LruCache.h"
+#include "UseTemplate_LRU\LruKCache.h"
 
 
 
@@ -29,14 +30,23 @@ private:
 void printResults(const std::string& testName, int capacity,
     const std::vector<int>& get_operations,
     const std::vector<int>& hits) {
-    int n = hits.size();
+    size_t n = hits.size();
+    size_t i = 0;
     std::cout << "缓存大小: " << capacity << std::endl;
     std::cout << "LRU - 命中率: " << std::fixed << std::setprecision(2)
-        << (100.0 * hits[0] / get_operations[0]) << "%" << std::endl;
+        << (100.0 * hits[i] / get_operations[i]) << "%" << std::endl;
+    i++;
+    std::cout<<"LRU-K - 命中率："<<std::fixed<<std::setprecision(2)
+        << (100.0 * hits[i] / get_operations[i]) << "%" << std::endl;
+    i++;
+    std::cout<<"LRU-Hash - 命中率："<<std::fixed<<std::setprecision(2)
+        << (100.0 * hits[i] / get_operations[i]) << "%" << std::endl;
+    i++;
     std::cout << "LFU - 命中率: " << std::fixed << std::setprecision(2)
-        << (100.0 * hits[1] / get_operations[1]) << "%" << std::endl;
+        << (100.0 * hits[i] / get_operations[i]) << "%" << std::endl;
+    i++;
     std::cout << "ARC - 命中率: " << std::fixed << std::setprecision(2)
-        << (100.0 * hits[2] / get_operations[2]) << "%" << std::endl;
+        << (100.0 * hits[i] / get_operations[i]) << "%" << std::endl;
 }
 
 void testHotDataAccess() {
@@ -48,13 +58,14 @@ void testHotDataAccess() {
     const int COLD_KEYS = 5000;
 
     LruCache<int, std::string> lru(CAPACITY);
+    LruKCache<int, std::string> lru_k(CAPACITY,CAPACITY,2);
 
     std::random_device rd;
     std::mt19937 gen(rd());
 
-    std::array<ICachePolicy<int, std::string>*,1> caches = { &lru};
-    std::vector<int> hits(3, 0);
-    std::vector<int> get_operations(3, 0);
+    std::array<ICachePolicy<int, std::string>*,2> caches = { &lru,&lru_k};
+    std::vector<int> hits(5, 0);
+    std::vector<int> get_operations(5, 0);
 
     // 先进行一系列put操作
     for (int i = 0; i < caches.size(); ++i) {
@@ -99,11 +110,11 @@ void testLoopPattern() {
     const int OPERATIONS = 50000;
 
     LruCache<int, std::string> lru(CAPACITY);
-   
+    LruKCache<int, std::string> lru_k(CAPACITY, CAPACITY, 2);
 
-    std::array<ICachePolicy<int, std::string>*, 1> caches = { &lru };
-    std::vector<int> hits(3, 0);
-    std::vector<int> get_operations(3, 0);
+    std::array<ICachePolicy<int, std::string>*, 2> caches = { &lru,&lru_k };
+    std::vector<int> hits(5, 0);
+    std::vector<int> get_operations(5, 0);
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -148,13 +159,13 @@ void testWorkloadShift() {
     const int PHASE_LENGTH = OPERATIONS / 5;
 
     LruCache<int, std::string> lru(CAPACITY);
- 
+    LruKCache<int, std::string> lru_k(CAPACITY, CAPACITY, 2);
 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::array<ICachePolicy<int, std::string>*, 1> caches = { &lru};
-    std::vector<int> hits(3, 0);
-    std::vector<int> get_operations(3, 0);
+    std::array<ICachePolicy<int, std::string>*, 2> caches = { &lru,&lru_k};
+    std::vector<int> hits(5, 0);
+    std::vector<int> get_operations(5, 0);
 
     // 先填充一些初始数据
     for (int i = 0; i < caches.size(); ++i) {

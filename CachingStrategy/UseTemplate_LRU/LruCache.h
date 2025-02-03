@@ -11,10 +11,19 @@ public:
 	using NodePtr = shared_ptr<LruNodeType>;
 	using NodeHash = unordered_map<Key, NodePtr>;
 
+private:
+	size_t capacity_;
+	mutex mutex_;
+	NodeHash nodeHash_;
+	NodePtr dummyHead_;
+	NodePtr dummyTail_;
+
 public:
 	LruCache(unsigned int capacity) : capacity_(capacity) {
 		initializeList();
 	}
+
+	~LruCache() override = default;
 
 	void put(Key key, Value value) override {
 		if (this->capacity_ <= 0) return;
@@ -42,6 +51,7 @@ public:
 		else {
 			NodePtr nodeAddress = nodeHash_[key];
 			value = nodeAddress->getValue();
+			nodeAddress->increaseAccessCount();
 			moveToRecentPosition(nodeAddress);//adjust the node's position in the linked list
 			return value;
 		}	
@@ -54,6 +64,15 @@ public:
 		removeNode(nodeHash_[key]);
 		nodeHash_.erase(key);
 		return true;
+	}
+
+	NodePtr getNode(Key key) {
+		return nodeHash_[key];
+	}
+
+	void moveToRecentPosition(NodePtr node) {
+		removeNode(node);
+		insertNode(node);
 	}
 
 private:
@@ -77,14 +96,11 @@ private:
 		node->getNext()->setPre(node->getPre());
 	}
 
-	void moveToRecentPosition(NodePtr node) {
-		removeNode(node);
-		insertNode(node);
-	}
 
 	//before using this function, it is necessary to ensure that the node already exists
 	void updateExitingNode(NodePtr node,const Value& value) {
 		node->setValue(value);
+		node->increaseAccessCount();
 		moveToRecentPosition(node);
 	}
 
@@ -103,10 +119,4 @@ private:
 		nodeHash_[key] = newNode;
 	}
 
-private:
-	unsigned int capacity_;
-	mutex mutex_;
-	NodeHash nodeHash_;
-	NodePtr dummyHead_;
-	NodePtr dummyTail_;
 };

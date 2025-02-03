@@ -13,11 +13,12 @@ private:
 
 public:
 	LruNode(Key key, Value value)
-		: key_(key)
-		, value_(value)
-		, accessCount_(0)
-		, pre_(nullptr)
-		, next_(nullptr)
+		: key_{ key }
+		, value_{ value }
+		, accessCount_{ 1 } //once something is placed in there, it is considered to have been visited
+							//therefore the initial value is set to 1
+		, pre_{ nullptr }
+		, next_{ nullptr }
 	{}
 	Key getKey() { return this->key_; }
 	void setKey(Key key) { this->key_ = key; }
