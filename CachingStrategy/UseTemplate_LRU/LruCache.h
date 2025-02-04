@@ -25,7 +25,7 @@ public:
 
 	~LruCache() override = default;
 
-	void put(Key key, Value value) override {
+	void put(Key key, Value& value) override {
 		if (this->capacity_ <= 0) return;
 		lock_guard<mutex> lock(mutex_);
 		auto it = nodeHash_.find(key);

@@ -11,6 +11,7 @@
 #include "UseTemplate_LRU\ICachePolicy.h"
 #include "UseTemplate_LRU\LruCache.h"
 #include "UseTemplate_LRU\LruKCache.h"
+#include "UseTemplate_LRU\SliceLruCache.h"
 
 
 
@@ -40,7 +41,7 @@ void printResults(const std::string& testName,
     std::cout << "LRU-K - 命中率：" << std::fixed << std::setprecision(2)
         << (100.0 * hits[i] / get_operations[i]) << "%" << std::endl;
     i++;
-    std::cout << "LRU-Hash - 命中率：" << std::fixed << std::setprecision(2)
+    std::cout << "Slice_LRU - 命中率：" << std::fixed << std::setprecision(2)
         << (100.0 * hits[i] / get_operations[i]) << "%" << std::endl;
     i++;
     std::cout << "LFU - 命中率: " << std::fixed << std::setprecision(2)
@@ -102,7 +103,7 @@ void testLoopPattern(const std::vector<ICachePolicy<Key, Value>*>& caches,std::v
     std::cout << "\n=== 测试场景2：循环扫描测试 ===" << std::endl;
 
     const int LOOP_SIZE = 200;
-    const int OPERATIONS = 50000;
+    const int OPERATIONS = 100000;
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -143,7 +144,7 @@ template<typename Key, typename Value>
 void testWorkloadShift(const std::vector<ICachePolicy<Key, Value>*>& caches,std::vector<int>& hits,std::vector<int>& get_operations) {
     std::cout << "\n=== 测试场景3：工作负载剧烈变化测试 ===" << std::endl;
 
-    const int OPERATIONS = 80000;
+    const int OPERATIONS = 100000;
     const int PHASE_LENGTH = OPERATIONS / 5;
 
 
@@ -204,11 +205,12 @@ void testWorkloadShift(const std::vector<ICachePolicy<Key, Value>*>& caches,std:
 }
 
 void test() {
-    const int CAPACITY = 5;
+    const int CAPACITY = 100;
     LruCache<int, string> lru(CAPACITY);
     LruKCache<int, string> lru_k(CAPACITY, CAPACITY, 2);
+    SliceLruCache<int, string> slice_lru( CAPACITY<<4,CAPACITY);
 
-    vector<ICachePolicy<int, string>*> caches = { &lru,&lru_k };
+    vector<ICachePolicy<int, string>*> caches = { &lru,&lru_k,&slice_lru};
     vector<int> hits(5, 0);
     vector<int> get_operations(5, 0);
 

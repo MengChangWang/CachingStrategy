@@ -22,7 +22,7 @@ public:
 		return LruCache<Key, Value>::get(key);
 	}
 
-	void put(Key key, Value value) {
+	void put(Key key, Value& value) {
 		if (this->historyList_->isExit(key) == false) {
 			this->historyList_->put(key, value);
 			return;
@@ -30,6 +30,11 @@ public:
 		if (isGreaterThanK(key))
 			putIntoLruCache(key, historyList_->get(key));
 	}
+
+	bool remove(Key key) {
+		return LruCache<Key, Value>::remove(key);
+	}
+
 private:
 	void putIntoLruCache(Key key, Value value) {
 		historyList_->remove(key);
