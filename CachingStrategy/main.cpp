@@ -1,8 +1,8 @@
 #include"test.h"
 
+
 int main() {
-    testHotDataAccess();
-    testLoopPattern();
-    testWorkloadShift();
+    test();
+
     return 0;
 }

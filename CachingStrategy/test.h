@@ -28,12 +28,12 @@ private:
 };
 
 // 辅助函数：打印结果
-void printResults(const std::string& testName, int capacity,
+void printResults(const std::string& testName, 
     const std::vector<int>& get_operations,
     const std::vector<int>& hits) {
     size_t n = hits.size();
     size_t i = 0;
-    std::cout << "缓存大小: " << capacity << std::endl;
+    //std::cout << "缓存大小: " << capacity << std::endl;
     std::cout << "LRU - 命中率: " << std::fixed << std::setprecision(2)
         << (100.0 * hits[i] / get_operations[i]) << "%" << std::endl;
     i++;
@@ -50,23 +50,17 @@ void printResults(const std::string& testName, int capacity,
         << (100.0 * hits[i] / get_operations[i]) << "%" << std::endl;
 }
 
-void testHotDataAccess() {
+template<typename Key,typename Value>
+void testHotDataAccess(const std::vector<ICachePolicy<Key,Value>*>& caches,std::vector<int>& hits,std::vector<int>& get_operations) {
     std::cout << "\n=== 测试场景1：热点数据访问测试 ===" << std::endl;
 
-    const int CAPACITY = 5;
     const int OPERATIONS = 100000;
     const int HOT_KEYS = 3;
     const int COLD_KEYS = 5000;
 
-    LruCache<int, std::string> lru(CAPACITY);
-    LruKCache<int, std::string> lru_k(CAPACITY, CAPACITY, 2);
-
     std::random_device rd;
     std::mt19937 gen(rd());
 
-    std::array<ICachePolicy<int, std::string>*, 2> caches = { &lru,&lru_k };
-    std::vector<int> hits(5, 0);
-    std::vector<int> get_operations(5, 0);
 
     // 先进行一系列put操作
     for (int i = 0; i < caches.size(); ++i) {
@@ -100,22 +94,15 @@ void testHotDataAccess() {
         }
     }
 
-    printResults("热点数据访问测试", CAPACITY, get_operations, hits);
+    printResults("热点数据访问测试", get_operations, hits);
 }
 
-void testLoopPattern() {
+template<typename Key, typename Value>
+void testLoopPattern(const std::vector<ICachePolicy<Key, Value>*>& caches,std::vector<int>& hits,std::vector<int>& get_operations) {
     std::cout << "\n=== 测试场景2：循环扫描测试 ===" << std::endl;
 
-    const int CAPACITY = 3;
     const int LOOP_SIZE = 200;
     const int OPERATIONS = 50000;
-
-    LruCache<int, std::string> lru(CAPACITY);
-    LruKCache<int, std::string> lru_k(CAPACITY, CAPACITY, 2);
-
-    std::array<ICachePolicy<int, std::string>*, 2> caches = { &lru,&lru_k };
-    std::vector<int> hits(5, 0);
-    std::vector<int> get_operations(5, 0);
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -149,24 +136,19 @@ void testLoopPattern() {
         }
     }
 
-    printResults("循环扫描测试", CAPACITY, get_operations, hits);
+    printResults("循环扫描测试", get_operations, hits);
 }
 
-void testWorkloadShift() {
+template<typename Key, typename Value>
+void testWorkloadShift(const std::vector<ICachePolicy<Key, Value>*>& caches,std::vector<int>& hits,std::vector<int>& get_operations) {
     std::cout << "\n=== 测试场景3：工作负载剧烈变化测试 ===" << std::endl;
 
-    const int CAPACITY = 4;
     const int OPERATIONS = 80000;
     const int PHASE_LENGTH = OPERATIONS / 5;
 
-    LruCache<int, std::string> lru(CAPACITY);
-    LruKCache<int, std::string> lru_k(CAPACITY, CAPACITY, 2);
 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::array<ICachePolicy<int, std::string>*, 2> caches = { &lru,&lru_k };
-    std::vector<int> hits(5, 0);
-    std::vector<int> get_operations(5, 0);
 
     // 先填充一些初始数据
     for (int i = 0; i < caches.size(); ++i) {
@@ -218,6 +200,19 @@ void testWorkloadShift() {
         }
     }
 
-    printResults("工作负载剧烈变化测试", CAPACITY, get_operations, hits);
+    printResults("工作负载剧烈变化测试", get_operations, hits);
 }
 
+void test() {
+    const int CAPACITY = 5;
+    LruCache<int, string> lru(CAPACITY);
+    LruKCache<int, string> lru_k(CAPACITY, CAPACITY, 2);
+
+    vector<ICachePolicy<int, string>*> caches = { &lru,&lru_k };
+    vector<int> hits(5, 0);
+    vector<int> get_operations(5, 0);
+
+    testHotDataAccess(caches, hits, get_operations);
+    testLoopPattern(caches, hits, get_operations);
+    testWorkloadShift(caches, hits, get_operations);
+}
