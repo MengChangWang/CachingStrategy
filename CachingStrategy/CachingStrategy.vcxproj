@@ -22,6 +22,7 @@
     <ClInclude Include="NoTemplate_LRU\BasicLRU.h" />
     <ClInclude Include="NoTemplate_LRU\LRUWithDiffTTL.h" />
     <ClInclude Include="test.h" />
+    <ClInclude Include="UseTemplate_LFU\LfuCache.h" />
     <ClInclude Include="UseTemplate_LRU\SliceLruCache.h" />
     <ClInclude Include="UseTemplate_LRU\ICachePolicy.h" />
     <ClInclude Include="UseTemplate_LRU\LruCache.h" />

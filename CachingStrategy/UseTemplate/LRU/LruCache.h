@@ -2,7 +2,7 @@
 #include<unordered_map>
 #include<mutex>
 #include"LruNode.h"
-#include"ICachePolicy.h"
+#include"UseTemplate\ICachePolicy.h"
 
 template<typename Key,typename Value>
 class LruCache :public ICachePolicy<Key,Value>{

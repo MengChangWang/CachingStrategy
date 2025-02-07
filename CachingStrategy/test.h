@@ -8,10 +8,10 @@
 #include <vector>
 #include <array>
 
-#include "UseTemplate_LRU\ICachePolicy.h"
-#include "UseTemplate_LRU\LruCache.h"
-#include "UseTemplate_LRU\LruKCache.h"
-#include "UseTemplate_LRU\SliceLruCache.h"
+#include "UseTemplate\ICachePolicy.h"
+#include "UseTemplate\LRU\LruCache.h"
+#include "UseTemplate\LRU\LruKCache.h"
+#include "UseTemplate\LRU\SliceLruCache.h"
 
 
 

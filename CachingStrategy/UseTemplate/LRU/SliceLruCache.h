@@ -35,8 +35,8 @@ public:
 
 private:
 	void initialize() {
-		unsigned int sliceCapacity= ceil(static_cast<double>(this->capacity_)/ static_cast<double>(this->sliceNum_));
-		for (int i = 0; i < this->sliceNum_; i++) {
+		unsigned int sliceCapacity= static_cast<unsigned int>(ceil(static_cast<double>(this->capacity_)/ static_cast<double>(this->sliceNum_)));
+		for (unsigned int i = 0; i < this->sliceNum_; i++) {
 			sliceLruCache_.emplace_back(make_unique<LruCache<Key, Value>>(sliceCapacity));
 		}
 	}
