@@ -8,7 +8,7 @@ private:
 	unsigned int capacity_;
 	vector<unique_ptr<LruCache<Key, Value>>>  sliceLruCache_;
 public:
-	SliceLruCache(unsigned int sliceNum, unsigned int capacity) : sliceNum_{ sliceNum}, capacity_{ capacity } {
+	SliceLruCache(unsigned int sliceNum, unsigned int capacity) : sliceNum_{ sliceNum }, capacity_{ capacity } {
 		initialize();
 	}
 	~SliceLruCache() = default;

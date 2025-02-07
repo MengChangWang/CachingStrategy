@@ -13,23 +13,57 @@
 #include "UseTemplate\LRU\LruKCache.h"
 #include "UseTemplate\LRU\SliceLruCache.h"
 
-
-
 class Timer {
 public:
-    Timer() : start_(std::chrono::high_resolution_clock::now()) {}
-
-    double elapsed() {
-        auto now = std::chrono::high_resolution_clock::now();
-        return std::chrono::duration_cast<std::chrono::milliseconds>(now - start_).count();
-    }
+    Timer();
+    double elapsed();
 
 private:
     std::chrono::time_point<std::chrono::high_resolution_clock> start_;
 };
 
 // 辅助函数：打印结果
-void printResults(const std::string& testName, 
+void printResults(const std::string& testName,
+    const std::vector<int>& get_operations,
+    const std::vector<int>& hits);
+
+template<typename Key, typename Value>
+void testHotDataAccess(const std::vector<ICachePolicy<Key, Value>*>& caches, std::vector<int>& hits, std::vector<int>& get_operations);
+
+template<typename Key, typename Value>
+void testLoopPattern(const std::vector<ICachePolicy<Key, Value>*>& caches, std::vector<int>& hits, std::vector<int>& get_operations);
+
+template<typename Key, typename Value>
+void testWorkloadShift(const std::vector<ICachePolicy<Key, Value>*>& caches, std::vector<int>& hits, std::vector<int>& get_operations);
+
+void test();
+
+// Implementation
+
+void test() {
+    const int CAPACITY = 1000;
+    LruCache<int, std::string> lru(CAPACITY);
+    LruKCache<int, std::string> lru_k(CAPACITY, CAPACITY, 2);
+    SliceLruCache<int, std::string> slice_lru(CAPACITY / 10, CAPACITY);
+
+    std::vector<ICachePolicy<int, std::string>*> caches = { &lru,&lru_k,&slice_lru };
+    std::vector<int> hits(5, 0);
+    std::vector<int> get_operations(5, 0);
+
+    testHotDataAccess(caches, hits, get_operations);
+    testLoopPattern(caches, hits, get_operations);
+    testWorkloadShift(caches, hits, get_operations);
+}
+
+
+Timer::Timer() : start_(std::chrono::high_resolution_clock::now()) {}
+
+double Timer::elapsed() {
+    auto now = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(now - start_).count();
+}
+
+void printResults(const std::string& testName,
     const std::vector<int>& get_operations,
     const std::vector<int>& hits) {
     size_t n = hits.size();
@@ -51,8 +85,8 @@ void printResults(const std::string& testName,
         << (100.0 * hits[i] / get_operations[i]) << "%" << std::endl;
 }
 
-template<typename Key,typename Value>
-void testHotDataAccess(const std::vector<ICachePolicy<Key,Value>*>& caches,std::vector<int>& hits,std::vector<int>& get_operations) {
+template<typename Key, typename Value>
+void testHotDataAccess(const std::vector<ICachePolicy<Key, Value>*>& caches, std::vector<int>& hits, std::vector<int>& get_operations) {
     std::cout << "\n=== 测试场景1：热点数据访问测试 ===" << std::endl;
 
     const int OPERATIONS = 100000;
@@ -61,7 +95,6 @@ void testHotDataAccess(const std::vector<ICachePolicy<Key,Value>*>& caches,std::
 
     std::random_device rd;
     std::mt19937 gen(rd());
-
 
     // 先进行一系列put操作
     for (int i = 0; i < caches.size(); ++i) {
@@ -87,7 +120,6 @@ void testHotDataAccess(const std::vector<ICachePolicy<Key,Value>*>& caches,std::
                 key = HOT_KEYS + (gen() % COLD_KEYS);
             }
 
-
             get_operations[i]++;
             if (caches[i]->isExit(key)) {
                 hits[i]++;
@@ -99,7 +131,7 @@ void testHotDataAccess(const std::vector<ICachePolicy<Key,Value>*>& caches,std::
 }
 
 template<typename Key, typename Value>
-void testLoopPattern(const std::vector<ICachePolicy<Key, Value>*>& caches,std::vector<int>& hits,std::vector<int>& get_operations) {
+void testLoopPattern(const std::vector<ICachePolicy<Key, Value>*>& caches, std::vector<int>& hits, std::vector<int>& get_operations) {
     std::cout << "\n=== 测试场景2：循环扫描测试 ===" << std::endl;
 
     const int LOOP_SIZE = 200;
@@ -141,12 +173,11 @@ void testLoopPattern(const std::vector<ICachePolicy<Key, Value>*>& caches,std::v
 }
 
 template<typename Key, typename Value>
-void testWorkloadShift(const std::vector<ICachePolicy<Key, Value>*>& caches,std::vector<int>& hits,std::vector<int>& get_operations) {
+void testWorkloadShift(const std::vector<ICachePolicy<Key, Value>*>& caches, std::vector<int>& hits, std::vector<int>& get_operations) {
     std::cout << "\n=== 测试场景3：工作负载剧烈变化测试 ===" << std::endl;
 
     const int OPERATIONS = 100000;
     const int PHASE_LENGTH = OPERATIONS / 5;
-
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -204,17 +235,3 @@ void testWorkloadShift(const std::vector<ICachePolicy<Key, Value>*>& caches,std:
     printResults("工作负载剧烈变化测试", get_operations, hits);
 }
 
-void test() {
-    const int CAPACITY = 100;
-    LruCache<int, string> lru(CAPACITY);
-    LruKCache<int, string> lru_k(CAPACITY, CAPACITY, 2);
-    SliceLruCache<int, string> slice_lru( CAPACITY<<4,CAPACITY);
-
-    vector<ICachePolicy<int, string>*> caches = { &lru,&lru_k,&slice_lru};
-    vector<int> hits(5, 0);
-    vector<int> get_operations(5, 0);
-
-    testHotDataAccess(caches, hits, get_operations);
-    testLoopPattern(caches, hits, get_operations);
-    testWorkloadShift(caches, hits, get_operations);
-}
