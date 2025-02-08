@@ -7,11 +7,12 @@ class LruNode {
 private:
 	Key key_;
 	Value value_;
-	size_t accessCount_;
-	shared_ptr<LruNode> pre_;
-	shared_ptr<LruNode> next_;
+	unsigned int accessCount_;
+	shared_ptr<LruNode<Key,Value>> pre_;
+	shared_ptr<LruNode<Key, Value>> next_;
 
 public:
+	LruNode() = delete;
 	LruNode(Key key, Value value)
 		: key_{ key }
 		, value_{ value }
@@ -20,16 +21,16 @@ public:
 		, pre_{ nullptr }
 		, next_{ nullptr }
 	{}
-	Key getKey() { return this->key_; }
-	void setKey(Key key) { this->key_ = key; }
-	Value getValue() { return this->value_; }
-	void setValue(Value value) {  this->value_ = value; }
-	size_t getAccessCount() { return accessCount_; }
+	const Key getKey() { return this->key_; }
+	void setKey(const Key& key) { this->key_ = key; }
+	const Value getValue() { return this->value_; }
+	void setValue(const Value& value) { this->value_ = value; }
+	const unsigned int getAccessCount() { return accessCount_; }
 	void increaseAccessCount() { this->accessCount_++; }
-	shared_ptr<LruNode> getPre(){ return this->pre_; }
-	void setPre(shared_ptr<LruNode> node) { this->pre_ = node; }
-	shared_ptr<LruNode> getNext(){ return this->next_; }
-	void setNext(shared_ptr<LruNode> node) { this->next_ = node; }
+	shared_ptr<LruNode<Key, Value>> getPre(){ return this->pre_; }
+	void setPre(const shared_ptr<LruNode<Key, Value>>& node) { this->pre_ = node; }
+	shared_ptr<LruNode<Key, Value>> getNext(){ return this->next_; }
+	void setNext(const shared_ptr<LruNode<Key, Value>>& node) { this->next_ = node; }
 
 	//friend class LruCache<Key, Value>;
 };

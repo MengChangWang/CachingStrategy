@@ -13,22 +13,22 @@ public:
 	}
 	~SliceLruCache() = default;
 
-	bool isExit(Key key) {
+	bool isExit(const Key& key) {
 		size_t sliceIndex = hashFun(key) % this->sliceNum_;
 		return this->sliceLruCache_[sliceIndex]->isExit(key);
 	}
 
-	Value get(Key key) {
+	optional<Value> get(const Key& key) {
 		size_t sliceIndex = hashFun(key) % this->sliceNum_;
 		return this->sliceLruCache_[sliceIndex]->get(key);
 	}
 
-	void put(Key key, Value& value) {
+	void put(const Key& key,const Value& value) {
 		size_t sliceIndex = hashFun(key) % this->sliceNum_;
 		this->sliceLruCache_[sliceIndex]->put(key, value);
 	}
 
-	bool remove(Key key) {
+	bool remove(const Key& key) {
 		size_t sliceIndex = hashFun(key) % this->sliceNum_;
 		return this->sliceLruCache_[sliceIndex]->remove(key);
 	}
