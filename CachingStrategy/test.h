@@ -121,9 +121,10 @@ void testHotDataAccess(const std::vector<ICachePolicy<Key, Value>*>& caches, std
             }
 
             get_operations[i]++;
-            if (caches[i]->isExit(key)) {
+            if (caches[i]->get(key)) {
                 hits[i]++;
             }
+        
         }
     }
 
@@ -163,9 +164,10 @@ void testLoopPattern(const std::vector<ICachePolicy<Key, Value>*>& caches, std::
             }
 
             get_operations[i]++;
-            if (caches[i]->isExit(key)) {
+            if (caches[i]->get(key)) {
                 hits[i]++;
             }
+         
         }
     }
 
@@ -220,7 +222,7 @@ void testWorkloadShift(const std::vector<ICachePolicy<Key, Value>*>& caches, std
             }
 
             get_operations[i]++;
-            if (caches[i]->isExit(key)) {
+            if (caches[i]->get(key)) {
                 hits[i]++;
             }
 
