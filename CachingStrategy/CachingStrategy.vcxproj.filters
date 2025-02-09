@@ -39,7 +39,34 @@
     <ClInclude Include="UseTemplate_LRU\SliceLruCache.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="UseTemplate_LFU\LfuCache.h">
+    <ClInclude Include="NoTemplate\LRU\BasicLRU.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="NoTemplate\LRU\LRUWithDiffTTL.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UseTemplate\LRU\LruCache.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UseTemplate\LRU\LruKCache.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UseTemplate\LRU\LruNode.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UseTemplate\LRU\SliceLruCache.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UseTemplate\ICachePolicy.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UseTemplate\LFU\LfuCache.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UseTemplate\LFU\LfuNode.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UseTemplate\LFU\NodeList.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
