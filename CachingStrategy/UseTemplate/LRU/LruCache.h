@@ -9,12 +9,12 @@ template<typename Key, typename Value>
 class LruCache : public ICachePolicy<Key, Value> {
 public:
     using Node = LruNode<Key, Value>;
-    using NodePtr = std::shared_ptr<Node>;
-    using NodeHash = std::unordered_map<Key, NodePtr>;
+    using NodePtr = shared_ptr<Node>;
+    using NodeHash = unordered_map<Key, NodePtr>;
 
 private:
     size_t capacity_;
-    std::mutex mutex_;
+    mutex mutex_;
     NodeHash nodeHash_;
     NodePtr dummyHead_;
     NodePtr dummyTail_;
@@ -28,14 +28,14 @@ public:
     optional<Value> get(const Key& key) override;
     bool remove(const Key& key) override;
     NodePtr getNode(const Key& key);
-    void moveToRecentPosition(NodePtr& node);
+    void moveToRecentPosition(const NodePtr& node);
     
 
 private:
     void initializeList();
-    void insertNode(NodePtr& node);
-    void removeNode(NodePtr& node);
-    void updateExitingNode(NodePtr& node, const Value& value);
+    void insertNode(const NodePtr& node);
+    void removeNode(const NodePtr& node);
+    void updateExitingNode(const NodePtr& node, const Value& value);
     void evictLeastAccessNode();
     void addNewNode(const Key& key, const Value& value);
     
@@ -49,7 +49,7 @@ LruCache<Key, Value>::LruCache(unsigned int capacity) : capacity_(capacity) {
 template<typename Key, typename Value>
 void LruCache<Key, Value>::put(const Key& key,const Value& value) {
     if (this->capacity_ <= 0) return;
-    std::lock_guard<std::mutex> lock(mutex_);
+    lock_guard<mutex> lock{ this->mutex_ };
     auto it = nodeHash_.find(key);
     if (it != nodeHash_.end()) {
         updateExitingNode(it->second, value);
@@ -69,7 +69,7 @@ bool LruCache<Key, Value>::isExit(const Key& key) {
 
 template<typename Key, typename Value>
 optional<Value> LruCache<Key, Value>::get(const Key& key) {
-    std::lock_guard<std::mutex> lock{ mutex_ };
+    lock_guard<mutex> lock{ this->mutex_ };
     Value value{};
     if (isExit(key) == false) return nullopt;
     else {
@@ -96,21 +96,21 @@ typename LruCache<Key, Value>::NodePtr LruCache<Key, Value>::getNode(const Key& 
 }
 
 template<typename Key, typename Value>
-void LruCache<Key, Value>::moveToRecentPosition(NodePtr& node) {
+void LruCache<Key, Value>::moveToRecentPosition(const NodePtr& node) {
     removeNode(node);
     insertNode(node);
 }
 
 template<typename Key, typename Value>
 void LruCache<Key, Value>::initializeList() {
-    dummyHead_ = std::make_shared<Node>(Key(), Value());
-    dummyTail_ = std::make_shared<Node>(Key(), Value());
+    dummyHead_ = make_shared<Node>(Key(), Value());
+    dummyTail_ = make_shared<Node>(Key(), Value());
     dummyHead_->setNext(dummyTail_);
     dummyTail_->setPre(dummyHead_);
 }
 
 template<typename Key, typename Value>
-void LruCache<Key, Value>::insertNode(NodePtr& node) {
+void LruCache<Key, Value>::insertNode(const NodePtr& node) {
     node->setNext(dummyTail_);
     node->setPre(dummyTail_->getPre());
 
@@ -119,13 +119,13 @@ void LruCache<Key, Value>::insertNode(NodePtr& node) {
 }
 
 template<typename Key, typename Value>
-void LruCache<Key, Value>::removeNode(NodePtr& node) {
+void LruCache<Key, Value>::removeNode(const NodePtr& node) {
     node->getPre()->setNext(node->getNext());
     node->getNext()->setPre(node->getPre());
 }
 
 template<typename Key, typename Value>
-void LruCache<Key, Value>::updateExitingNode(NodePtr& node, const Value& value) {
+void LruCache<Key, Value>::updateExitingNode(const NodePtr& node, const Value& value) {
     node->setValue(value);
     node->increaseAccessCount();
     moveToRecentPosition(node);
@@ -143,7 +143,7 @@ void LruCache<Key, Value>::addNewNode(const Key& key, const Value& value) {
     if (nodeHash_.size() >= this->capacity_) {
         evictLeastAccessNode();
     }
-    NodePtr newNode = std::make_shared<Node>(key, value);
+    NodePtr newNode = make_shared<Node>(key, value);
     insertNode(newNode);
     nodeHash_[key] = newNode;
 }

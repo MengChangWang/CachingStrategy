@@ -3,7 +3,7 @@
 
 template<typename Key,typename Value>
 class NodeList {
-private:
+public:
 	using Node = LfuNode<Key, Value>;
 	using NodePtr = shared_ptr<Node>;
 
@@ -12,20 +12,22 @@ private:
 public:
 	NodeList();
 	~NodeList() = default;
-	void insertNode(NodePtr&);
-	void removeNode(NodePtr&);
+	void insertNode(const NodePtr&);
+	void removeNode(const NodePtr&);
 	NodePtr getLeastNode();
 	bool isEmpty();
 };
 
 template<typename Key,typename Value>
 NodeList<Key, Value>::NodeList() {
+	this->dummyHead_ = make_shared<Node>(Key(), Value());
+	this->dummyTail_ = make_shared<Node>(Key(), Value());
 	this->dummyHead_->setNext(this->dummyTail_);
 	this->dummyTail_->setPre(this->dummyHead_);
 }
 
 template<typename Key,typename Value>
-void NodeList<Key, Value>::insertNode(NodePtr& node) {
+void NodeList<Key, Value>::insertNode(const NodePtr& node) {
 	node->setNext(this->dummyHead_->getNext());
 	node->setPre(this->dummyHead_);
 
@@ -34,14 +36,14 @@ void NodeList<Key, Value>::insertNode(NodePtr& node) {
 }
 
 template<typename Key,typename Value>
-void NodeList<Key, Value>::removeNode(NodePtr& node) {
+void NodeList<Key, Value>::removeNode(const NodePtr& node) {
 	node->getPre()->setNext(node->getNext());
 	node->getNext()->setPre(node->getPre());
 }
 
 template<typename Key, typename Value>
-NodePtr NodeList<Key, Value>::getLeastNode() {
-	return this->dummyTail_->getNext();
+typename NodeList<Key, Value>::NodePtr NodeList<Key, Value>::getLeastNode() {
+	return this->dummyTail_->getPre();
 }
 
 template<typename Key,typename Value>

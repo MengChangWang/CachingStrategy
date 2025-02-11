@@ -1,4 +1,7 @@
 #pragma once
+
+//#define TEST
+
 #include <iostream>
 #include <string>
 #include <chrono>
@@ -12,6 +15,7 @@
 #include "UseTemplate\LRU\LruCache.h"
 #include "UseTemplate\LRU\LruKCache.h"
 #include "UseTemplate\LRU\SliceLruCache.h"
+#include "UseTemplate\LFU\LfuCache.h"
 
 class Timer {
 public:
@@ -41,12 +45,17 @@ void test();
 // Implementation
 
 void test() {
-    const int CAPACITY = 1000;
+#ifdef TEST
+    const unsigned int CAPACITY = 10;
+#else
+    const unsigned int CAPACITY = 1000;
+#endif
     LruCache<int, std::string> lru(CAPACITY);
     LruKCache<int, std::string> lru_k(CAPACITY, CAPACITY, 2);
     SliceLruCache<int, std::string> slice_lru(CAPACITY / 10, CAPACITY);
+    LfuCache<int, std::string> lfu(CAPACITY);
 
-    std::vector<ICachePolicy<int, std::string>*> caches = { &lru,&lru_k,&slice_lru };
+    std::vector<ICachePolicy<int, std::string>*> caches = { &lru,&lru_k,&slice_lru,&lfu};
     std::vector<int> hits(5, 0);
     std::vector<int> get_operations(5, 0);
 
@@ -89,9 +98,15 @@ template<typename Key, typename Value>
 void testHotDataAccess(const std::vector<ICachePolicy<Key, Value>*>& caches, std::vector<int>& hits, std::vector<int>& get_operations) {
     std::cout << "\n=== 测试场景1：热点数据访问测试 ===" << std::endl;
 
+#ifdef TEST
+    const int OPERATIONS = 10;
+    const int HOT_KEYS = 3;
+    const int COLD_KEYS = 50;
+#else
     const int OPERATIONS = 100000;
     const int HOT_KEYS = 3;
     const int COLD_KEYS = 5000;
+#endif // DEBUG
 
     std::random_device rd;
     std::mt19937 gen(rd());
