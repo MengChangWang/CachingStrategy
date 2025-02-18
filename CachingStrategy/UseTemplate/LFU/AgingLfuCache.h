@@ -39,12 +39,12 @@ private:
 	void insertIntoFreqHash(const NodePtr&);
 	void insertIntoNodeHash(const Key&, const NodePtr&);
 	void removeNode(const NodePtr&);
-	void removeFromFreqHash(const NodePtr&);
+	void removeFromFreqHash(const NodePtr&,const char&&);
 	void removeFromNodeHash(const NodePtr&);
 	void evictLeastFrequentNode();
 	void updateMinFreq();
 	void increaseTotalFreqNum();
-	void decreaseTotalFreqNum();
+	void decreaseTotalFreqNum(const unsigned int&);
 	void handleOverMaxAverageFreqNum();
 };
 
@@ -132,14 +132,17 @@ void AgingLfuCache<Key, Value>::removeFromNodeHash(const NodePtr& node) {
 
 
 template<typename Key, typename Value>
-void AgingLfuCache<Key, Value>::removeFromFreqHash(const NodePtr& node) {
+void AgingLfuCache<Key, Value>::removeFromFreqHash(const NodePtr& node,const char&& flag) {
 	unsigned int index = node->getFrequency();
 	FreqPtr freqPtr = this->freqHash_[index];
 	freqPtr->removeNode(node);
 
 	if (index == this->minFreq_) {
 		if (freqPtr->isEmpty()) {
-			updateMinFreq();
+			if (flag == 'd')
+				updateMinFreq();
+			else if (flag == 'u')
+				this->minFreq_++;
 		}
 	}
 }
@@ -157,9 +160,7 @@ optional<Value> AgingLfuCache<Key, Value>::get(const Key& key) {
 	if (isExit(key) == false) return nullopt;
 	NodePtr node = this->nodeHash_[key];
 	const Value value = node->getValue();
-	removeFromFreqHash(node);
-	node->increaseFrequency();
-	insertIntoFreqHash(node);
+	updateNode(node, value);
 	return value;
 }
 
@@ -182,11 +183,18 @@ bool AgingLfuCache<Key, Value>::remove(const Key& key) {
 template<typename Key, typename Value>
 void AgingLfuCache<Key, Value>::increaseTotalFreqNum()
 {
+	this->totalFreqNum_++;
+	this->curAverageFreqNum_ = this->totalFreqNum_ / this->nodeHash_.size();
 }
 
 template<typename Key, typename Value>
-void AgingLfuCache<Key, Value>::decreaseTotalFreqNum()
+void AgingLfuCache<Key, Value>::decreaseTotalFreqNum(const unsigned int& index)
 {
+	this->totalFreqNum_ -= index;
+	if (this->nodeHash_.empty())
+		this->curAverageFreqNum_ = 0;
+	else
+	this->curAverageFreqNum_ = this->totalFreqNum_ / this->nodeHash_.size();
 }
 
 template<typename Key, typename Value>
