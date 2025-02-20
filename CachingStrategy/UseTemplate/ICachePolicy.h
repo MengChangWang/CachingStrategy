@@ -9,5 +9,5 @@ public:
 	virtual void put(const Key&,const Value&) = 0;
 	virtual optional<Value> get(const Key&) = 0;
 	virtual bool remove(const Key&) = 0;
-	virtual bool isExit(const Key&) = 0;
+	virtual bool isExists(const Key&) = 0;
 };

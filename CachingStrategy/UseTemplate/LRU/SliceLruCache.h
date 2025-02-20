@@ -13,9 +13,9 @@ public:
 	}
 	~SliceLruCache() = default;
 
-	bool isExit(const Key& key) {
+	bool isExists(const Key& key) {
 		size_t sliceIndex = hashFun(key) % this->sliceNum_;
-		return this->sliceLruCache_[sliceIndex]->isExit(key);
+		return this->sliceLruCache_[sliceIndex]->isExists(key);
 	}
 
 	optional<Value> get(const Key& key) {

@@ -1,203 +1,243 @@
 #pragma once
 #include "..\ICachePolicy.h"
 #include "LfuNode.h"
-#include"NodeList.h"
+#include "NodeList.h"
 #include <mutex>
 #include <unordered_map>
+#include <stdexcept>
+#include <algorithm>
+#include "..\unique_min_heap.h"
 
 template<typename Key, typename Value>
-class AgingLfuCache :public ICachePolicy<Key, Value> {
+class AgingLfuCache : public ICachePolicy<Key, Value> {
 private:
-	using Node = LfuNode<Key, Value>;
-	using NodePtr = shared_ptr<Node>;
-	using NodeHash = unordered_map<Key, NodePtr>;
-	using FreqList = NodeList<Key, Value>;
-	using FreqPtr = shared_ptr<FreqList>;
-	using FreqHash = unordered_map<unsigned int, FreqPtr>;
+    using Node = LfuNode<Key, Value>;
+    using NodePtr = shared_ptr<Node>;
+    using NodeHash = unordered_map<Key, NodePtr>;
+    using FreqList = NodeList<Key, Value>;
+    using FreqPtr = shared_ptr<FreqList>;
+    using FreqHash = unordered_map<unsigned int, FreqPtr>;
+    using MinFreQueue = unique_min_heap<unsigned int>;
 
 private:
-	mutex mutex_;
-	NodeHash nodeHash_;
-	FreqHash freqHash_;
-	unsigned int capacity_;
-	unsigned int minFreq_;
-	unsigned int maxAverageFreqNum_;
-	unsigned int curAverageFreqNum_;
-	unsigned int totalFreqNum_;
+    mutex mutex_;
+    NodeHash nodeHash_;
+    FreqHash freqHash_;
+    MinFreQueue minFreQue;
+    unsigned int capacity_;
+    unsigned int minFreq_;
+    unsigned int maxAverageFreqNum_;
+    unsigned int curAverageFreqNum_;
+    unsigned int totalFreqNum_;
 
 public:
-	AgingLfuCache() = delete;
-	AgingLfuCache(unsigned int, unsigned int = 20);
-	~AgingLfuCache() = default;
-	void put(const Key&, const Value&);
-	optional<Value> get(const Key&);
-	bool isExit(const Key&);
-	bool remove(const Key&);
+    AgingLfuCache() = delete;
+    AgingLfuCache(unsigned int capacity, unsigned int maxAverageFreqNum = 20);
+    ~AgingLfuCache() = default;
+
+    void put(const Key& key, const Value& value) override;
+    optional<Value> get(const Key& key) override;
+    bool isExists(const Key& key)  override;
+    bool remove(const Key& key) override;
+
 private:
-	void updateNode(const NodePtr&, const Value&);
-	void insertNewNode(const Key&, const NodePtr&);
-	void insertIntoFreqHash(const NodePtr&);
-	void insertIntoNodeHash(const Key&, const NodePtr&);
-	void removeNode(const NodePtr&);
-	void removeFromFreqHash(const NodePtr&,const char&&);
-	void removeFromNodeHash(const NodePtr&);
-	void evictLeastFrequentNode();
-	void updateMinFreq();
-	void increaseTotalFreqNum();
-	void decreaseTotalFreqNum(const unsigned int&);
-	void handleOverMaxAverageFreqNum();
+    void updateNode(const NodePtr& node, const Value& value);
+    void insertNewNode(const Key& key, const NodePtr& node);
+    void insertIntoFreqHash(const NodePtr& node);
+    void insertIntoNodeHash(const Key& key, const NodePtr& node);
+    void removeNode(const NodePtr& node);
+    void removeFromFreqHash(const NodePtr& node);
+    void removeFromNodeHash(const NodePtr& node);
+    void evictLeastFrequentNode();
+    void updateMinFreq();
+    void increaseTotalFreqNum();
+    void decreaseTotalFreqNum(unsigned int freq);
+    void handleOverMaxAverageFreqNum();
 };
 
 template<typename Key, typename Value>
-AgingLfuCache<Key, Value>::AgingLfuCache(unsigned int capacity, unsigned int maxAverageFreqNum) :
-capacity_{ capacity },
-maxAverageFreqNum_{ maxAverageFreqNum }, curAverageFreqNum_{ 0 },
-totalFreqNum_{ 0 }, minFreq_{ static_cast<unsigned int>(INT64_MAX) } {}
-
+AgingLfuCache<Key, Value>::AgingLfuCache(unsigned int capacity, unsigned int maxAverageFreqNum)
+    : capacity_(capacity),
+    maxAverageFreqNum_(maxAverageFreqNum),
+    curAverageFreqNum_(0),
+    totalFreqNum_(0),
+    minFreq_(UINT_MAX) {
+    if (this->capacity_ == 0) {
+        throw std::invalid_argument("In AgingLfuCache.h-----Capacity must be greater than 0.");
+    }
+}
 
 template<typename Key, typename Value>
 void AgingLfuCache<Key, Value>::put(const Key& key, const Value& value) {
-	lock_guard<mutex> lock{ this->mutex_ };
-	if (this->nodeHash_.find(key) != this->nodeHash_.end()) {
-		NodePtr node = this->nodeHash_[key];
-		updateNode(node, value);
-		return;
-	}
-	if (this->nodeHash_.size() >= this->capacity_) {
-		evictLeastFrequentNode();
-	}
+    lock_guard<mutex> lock(mutex_);
 
-	NodePtr newNode = make_shared<Node>(key, value);
-	insertNewNode(key, newNode);
+    auto it = this->nodeHash_.find(key);
+    if (it != this->nodeHash_.end()) {
+        NodePtr node = it->second;
+        updateNode(node, value); 
+        increaseTotalFreqNum();
+        return;
+    }
+
+    if (nodeHash_.size() >= capacity_) {
+        evictLeastFrequentNode();
+    }
+
+    NodePtr newNode = make_shared<Node>(key, value);
+    insertNewNode(key, newNode);
+    increaseTotalFreqNum();
 }
 
 template<typename Key, typename Value>
 void AgingLfuCache<Key, Value>::updateNode(const NodePtr& node, const Value& value) {
-	node->setValue(value);
-	removeFromFreqHash(node);
-	node->increaseFrequency();
-	insertIntoFreqHash(node);
+    node->setValue(value);
+    removeFromFreqHash(node);
+    node->increaseFrequency();
+    insertIntoFreqHash(node);
 }
-
-template<typename Key, typename Value>
-void AgingLfuCache<Key, Value>::updateMinFreq() {
-	const unsigned int start = this->minFreq_;
-	const unsigned int maximums = this->freqHash_.size();
-	for (int i = start; i < maximums; i++) {
-		if (this->freqHash_[i]->isEmpty())
-			continue;
-		else {
-			this->minFreq_ = i;
-			break;
-		}
-	}
-}
-
-
 
 template<typename Key, typename Value>
 void AgingLfuCache<Key, Value>::insertNewNode(const Key& key, const NodePtr& node) {
-	insertIntoNodeHash(key, node);
-	insertIntoFreqHash(node);
-	this->minFreq_ = 1;
+    insertIntoNodeHash(key, node);
+    insertIntoFreqHash(node);
+    this->minFreq_ = 1; // 新节点频率为1，最小频率必为1
 }
 
 template<typename Key, typename Value>
 void AgingLfuCache<Key, Value>::insertIntoFreqHash(const NodePtr& node) {
-	const unsigned int index = node->getFrequency();
-	auto it = this->freqHash_.find(index);
-	if (it == this->freqHash_.end()) {
-		FreqPtr newFreqPtr = make_shared<FreqList>();
-		this->freqHash_[index] = newFreqPtr;
-	}
-	this->freqHash_[index]->insertNode(node);
+    const unsigned int freq = node->getFrequency();
+    auto it = this->freqHash_.find(freq);
+    if (it == this->freqHash_.end()) {
+        it = this->freqHash_.emplace(freq, std::make_shared<FreqList>()).first;
+    }
+    it->second->insertNode(node);
 }
 
 template<typename Key, typename Value>
 void AgingLfuCache<Key, Value>::insertIntoNodeHash(const Key& key, const NodePtr& node) {
-	this->nodeHash_[key] = node;
+    this->nodeHash_.emplace(key, node);
 }
 
 template<typename Key, typename Value>
 void AgingLfuCache<Key, Value>::removeNode(const NodePtr& node) {
-	removeFromFreqHash(node);
-	removeFromNodeHash(node);
+    removeFromFreqHash(node);
+    removeFromNodeHash(node);
+    decreaseTotalFreqNum(node->getFrequency());
+}
+
+template<typename Key, typename Value>
+void AgingLfuCache<Key, Value>::removeFromFreqHash(const NodePtr& node) {
+    unsigned int freq = node->getFrequency();
+    auto it = freqHash_.find(freq);
+    if (it == freqHash_.end()) return;
+
+    FreqPtr& freqList = it->second;
+    freqList->removeNode(node);
+
+    if (freqList->isEmpty()) {
+        freqHash_.erase(it);
+        if (freq == minFreq_) {
+            updateMinFreq();
+        }
+    }
 }
 
 template<typename Key, typename Value>
 void AgingLfuCache<Key, Value>::removeFromNodeHash(const NodePtr& node) {
-	const Key key = node->getKey();
-	this->nodeHash_.erase(key);
-}
-
-
-template<typename Key, typename Value>
-void AgingLfuCache<Key, Value>::removeFromFreqHash(const NodePtr& node,const char&& flag) {
-	unsigned int index = node->getFrequency();
-	FreqPtr freqPtr = this->freqHash_[index];
-	freqPtr->removeNode(node);
-
-	if (index == this->minFreq_) {
-		if (freqPtr->isEmpty()) {
-			if (flag == 'd')
-				updateMinFreq();
-			else if (flag == 'u')
-				this->minFreq_++;
-		}
-	}
+    this->nodeHash_.erase(node->getKey());
 }
 
 template<typename Key, typename Value>
 void AgingLfuCache<Key, Value>::evictLeastFrequentNode() {
-	FreqPtr freqList = this->freqHash_[this->minFreq_];
-	NodePtr node = freqList->getLeastNode();
-	removeNode(node);
+    auto it = this->freqHash_.find(minFreq_);
+    if (it == this->freqHash_.end() || it->second->isEmpty()) {       
+        throw logic_error("In AgingLfuCache.h-----Cannot evict from an empty cache."); 
+        return;
+    }
+
+    NodePtr node = it->second->getLeastNode();
+    if (!node) {
+        throw logic_error("In AgingLfuCache.h-----Cannot find least frequent node.");
+    }
+    else {
+    removeNode(node);
+    }
 }
 
 template<typename Key, typename Value>
-optional<Value> AgingLfuCache<Key, Value>::get(const Key& key) {
-	lock_guard<mutex> lock{ this->mutex_ };
-	if (isExit(key) == false) return nullopt;
-	NodePtr node = this->nodeHash_[key];
-	const Value value = node->getValue();
-	updateNode(node, value);
-	return value;
+void AgingLfuCache<Key, Value>::updateMinFreq() {
+    this->minFreq_ = UINT_MAX;
+    for (const auto& pair : this->freqHash_) {
+        if (!pair.second->isEmpty() && pair.first < minFreq_) {
+            this->minFreq_ = pair.first;
+        }
+    }
+    if (this->minFreq_ == UINT_MAX) {
+        this->minFreq_ = 1; // 无节点时重置为默认值
+    }
 }
 
 template<typename Key, typename Value>
-bool AgingLfuCache<Key, Value>::isExit(const Key& key) {
-	if (this->nodeHash_.find(key) != this->nodeHash_.end())
-		return true;
-	else
-		return false;
+std::optional<Value> AgingLfuCache<Key, Value>::get(const Key& key) {
+    lock_guard<mutex> lock(mutex_);
+    increaseTotalFreqNum();
+
+    auto it = nodeHash_.find(key);
+    if (it == nodeHash_.end()) {
+        return nullopt;
+    }
+
+    NodePtr node = it->second;
+    Value value = node->getValue();
+    updateNode(node, value);
+    return value;
+}
+
+template<typename Key, typename Value>
+bool AgingLfuCache<Key, Value>::isExists(const Key& key) {
+    return nodeHash_.find(key) != nodeHash_.end();
 }
 
 template<typename Key, typename Value>
 bool AgingLfuCache<Key, Value>::remove(const Key& key) {
-	if (isExit(key) == false) return false;
-	NodePtr node = this->nodeHash_[key];
-	removeNode(node);
-	return true;
+    lock_guard<mutex> lock(mutex_);
+    auto it = this->nodeHash_.find(key);
+    if (it == this->nodeHash_.end()) {
+        return false;
+    }
+    removeNode(it->second);
+    return true;
 }
 
 template<typename Key, typename Value>
-void AgingLfuCache<Key, Value>::increaseTotalFreqNum()
-{
-	this->totalFreqNum_++;
-	this->curAverageFreqNum_ = this->totalFreqNum_ / this->nodeHash_.size();
+void AgingLfuCache<Key, Value>::increaseTotalFreqNum() {
+    this->totalFreqNum_++;
+    this->curAverageFreqNum_ = this->nodeHash_.empty() ? 0 : totalFreqNum_ / nodeHash_.size();
+    if (this->curAverageFreqNum_ > this->maxAverageFreqNum_) {
+        handleOverMaxAverageFreqNum();
+    }
 }
 
 template<typename Key, typename Value>
-void AgingLfuCache<Key, Value>::decreaseTotalFreqNum(const unsigned int& index)
-{
-	this->totalFreqNum_ -= index;
-	if (this->nodeHash_.empty())
-		this->curAverageFreqNum_ = 0;
-	else
-	this->curAverageFreqNum_ = this->totalFreqNum_ / this->nodeHash_.size();
+void AgingLfuCache<Key, Value>::decreaseTotalFreqNum(unsigned int freq) {
+    this->totalFreqNum_ -= freq;
+    this->curAverageFreqNum_ = this->nodeHash_.empty() ? 0 : this->totalFreqNum_ / this->nodeHash_.size();
 }
 
 template<typename Key, typename Value>
-void AgingLfuCache<Key, Value>::handleOverMaxAverageFreqNum()
-{
+void AgingLfuCache<Key, Value>::handleOverMaxAverageFreqNum() {
+    const unsigned int subtrahend = this->maxAverageFreqNum_ / 2;
+    this->totalFreqNum_ = 0;
+
+    for (auto& pair : this->nodeHash_) {
+        NodePtr node = pair.second;
+        removeFromFreqHash(node);
+        unsigned int newFreq = max(node->getFrequency() - subtrahend, 1u);
+        node->setFrequency(newFreq);
+        this->totalFreqNum_ += newFreq;
+        insertIntoFreqHash(node);
+    }
+
+    this->curAverageFreqNum_ = this->nodeHash_.empty() ? 0 : this->totalFreqNum_ / this->nodeHash_.size();
+    updateMinFreq();
 }

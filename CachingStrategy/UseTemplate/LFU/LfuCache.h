@@ -28,7 +28,7 @@ public:
 	~LfuCache() = default;
 	void put(const Key&, const Value&);
 	optional<Value> get(const Key&);
-	bool isExit(const Key&);
+	bool isExists(const Key&);
 	bool remove(const Key&);
 private:
 	void updateNode(const NodePtr&, const Value&);
@@ -36,7 +36,7 @@ private:
 	void insertIntoFreqHash(const NodePtr&);
 	void insertIntoNodeHash(const Key&, const NodePtr&);
 	void removeNode(const NodePtr&);
-	void removeFromFreqHash(const NodePtr&, const char&&);
+	void removeFromFreqHash(const NodePtr&);
 	void removeFromNodeHash(const NodePtr&);
 	void evictLeastFrequentNode();
 	void updateMinFreq();
@@ -50,8 +50,9 @@ LfuCache<Key, Value>::LfuCache(unsigned int capacity) :capacity_{ capacity }, mi
 template<typename Key, typename Value>
 void LfuCache<Key, Value>::put(const Key& key, const Value& value) {
 	lock_guard<mutex> lock{ this->mutex_ };
-	if (this->nodeHash_.find(key) != this->nodeHash_.end()) {
-		NodePtr node = this->nodeHash_[key];
+	auto it = this->nodeHash_.find(key);
+	if (it != this->nodeHash_.end()) {
+		NodePtr node = it->second;
 		updateNode(node, value);
 		return;
 	}
@@ -66,7 +67,7 @@ void LfuCache<Key, Value>::put(const Key& key, const Value& value) {
 template<typename Key, typename Value>
 void LfuCache<Key, Value>::updateNode(const NodePtr& node, const Value& value) {
 	node->setValue(value);
-	removeFromFreqHash(node, 'u');
+	removeFromFreqHash(node);
 	node->increaseFrequency();
 	insertIntoFreqHash(node);
 }
@@ -81,16 +82,6 @@ void LfuCache<Key, Value>::updateMinFreq() {
 	}
 	if (this->minFreq_ == UINT_MAX)
 		this->minFreq_ = 1;
-	/*const unsigned int start = this->minFreq_;
-	const unsigned int maximums = this->freqHash_.size();
-	for (int i = start; i < maximums; i++) {
-		if (this->freqHash_[i]->isEmpty())
-			continue;
-		else {
-			this->minFreq_ = i;
-			break;
-		}
-	}*/
 }
 
 template<typename Key, typename Value>
@@ -113,12 +104,12 @@ void LfuCache<Key, Value>::insertIntoFreqHash(const NodePtr& node) {
 
 template<typename Key, typename Value>
 void LfuCache<Key, Value>::insertIntoNodeHash(const Key& key, const NodePtr& node) {
-	this->nodeHash_[key] = node;
+	this->nodeHash_.emplace(key, node);
 }
 
 template<typename Key, typename Value>
 void LfuCache<Key, Value>::removeNode(const NodePtr& node) {
-	removeFromFreqHash(node, 'd');
+	removeFromFreqHash(node);
 	removeFromNodeHash(node);
 }
 
@@ -129,26 +120,26 @@ void LfuCache<Key, Value>::removeFromNodeHash(const NodePtr& node) {
 }
 
 template<typename Key, typename Value>
-void LfuCache<Key, Value>::removeFromFreqHash(const NodePtr& node, const char&& flag) {
-	unsigned int index = node->getFrequency();
-	FreqPtr freqPtr = this->freqHash_[index];
-	freqPtr->removeNode(node);
-
-	if (freqPtr->isEmpty()) {
-		this->freqHash_.erase(index);
-		if (index == this->minFreq_) {
-			if (flag == 'd')
-				updateMinFreq();
-			else if (flag == 'u')
-				this->minFreq_++;
+void LfuCache<Key, Value>::removeFromFreqHash(const NodePtr& node) {
+	unsigned int freq = node->getFrequency();
+	auto it = this->freqHash_.find(freq);
+	if (it == this->freqHash_.end())
+		return;
+	it->second->removeNode(node);
+	if (it->second->isEmpty()) {
+		this->freqHash_.erase(it);
+		if (this->minFreq_ == freq) {
+			updateMinFreq();
 		}
 	}
 }
 
 template<typename Key, typename Value>
 void LfuCache<Key, Value>::evictLeastFrequentNode() {
-	FreqPtr freqList = this->freqHash_[this->minFreq_];
-	NodePtr node = freqList->getLeastNode();
+	auto it = this->freqHash_.find(this->minFreq_);
+	if (it == this->freqHash_.end())
+		return;
+	NodePtr node = it->second->getLeastNode();
 	removeNode(node);
 
 	/*removeFromNodeHash(node);
@@ -159,25 +150,26 @@ void LfuCache<Key, Value>::evictLeastFrequentNode() {
 template<typename Key, typename Value>
 optional<Value> LfuCache<Key, Value>::get(const Key& key) {
 	lock_guard<mutex> lock{ this->mutex_ };
-	if (isExit(key) == false) return nullopt;
-	NodePtr node = this->nodeHash_[key];
+	auto it = this->nodeHash_.find(key);
+	if (it == this->nodeHash_.end())
+		return nullopt;
+	NodePtr node = it->second;
 	const Value value = node->getValue();
 	updateNode(node, value);
 	return value;
 }
 
 template<typename Key, typename Value>
-bool LfuCache<Key, Value>::isExit(const Key& key) {
-	if (this->nodeHash_.find(key) != this->nodeHash_.end())
-		return true;
-	else
-		return false;
+bool LfuCache<Key, Value>::isExists(const Key& key) {
+	return this->nodeHash_.find(key) != this->nodeHash_.end();
 }
 
 template<typename Key, typename Value>
 bool LfuCache<Key, Value>::remove(const Key& key) {
-	if (isExit(key) == false) return false;
-	NodePtr node = this->nodeHash_[key];
+	auto it = this->nodeHash_.find(key);
+	if (it == this->nodeHash_.end())
+		return false;
+	NodePtr node = it->second;
 	removeNode(node);
 	return true;
 }

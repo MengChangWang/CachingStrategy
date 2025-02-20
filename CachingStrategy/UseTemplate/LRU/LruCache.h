@@ -24,7 +24,7 @@ public:
     ~LruCache() override = default;
 
     void put(const Key& key,const Value& value) override;
-    bool isExit(const Key& key) override;
+    bool isExists(const Key& key) override;
     optional<Value> get(const Key& key) override;
     bool remove(const Key& key) override;
     NodePtr getNode(const Key& key);
@@ -59,40 +59,41 @@ void LruCache<Key, Value>::put(const Key& key,const Value& value) {
 }
 
 template<typename Key, typename Value>
-bool LruCache<Key, Value>::isExit(const Key& key) {
-    auto it = nodeHash_.find(key);
-    if (it == nodeHash_.end()) {
-        return false;
-    }
-    return true;
+bool LruCache<Key, Value>::isExists(const Key& key) {
+   return this->nodeHash_.find(key) != this->nodeHash_.end();
 }
 
 template<typename Key, typename Value>
 optional<Value> LruCache<Key, Value>::get(const Key& key) {
     lock_guard<mutex> lock{ this->mutex_ };
-    Value value{};
-    if (isExit(key) == false) return nullopt;
-    else {
-        NodePtr nodeAddress = nodeHash_[key];
-        value = nodeAddress->getValue();
-        nodeAddress->increaseAccessCount();
-        moveToRecentPosition(nodeAddress);
-        return value;
-    }
+    auto it = this->nodeHash_.find(key);
+    if (it == this->nodeHash_.end())
+        return nullopt;
+    const NodePtr node = it->second;
+    const Value value = node->getValue();
+    node->increaseAccessCount();
+    moveToRecentPosition(node);
+    return value;
 }
 
 template<typename Key, typename Value>
 bool LruCache<Key, Value>::remove(const Key& key) {
-    std::lock_guard<std::mutex> lock{ mutex_ };
-    if (isExit(key) == false) return false;
-    removeNode(nodeHash_[key]);
-    nodeHash_.erase(key);
+    lock_guard<mutex> lock{ mutex_ };
+    auto it = this->nodeHash_.find(key);
+    if (it == this->nodeHash_.end()) {
+        return false;
+    }
+    removeNode(it->second);
+    this->nodeHash_.erase(it);
     return true;
 }
 
 template<typename Key, typename Value>
 typename LruCache<Key, Value>::NodePtr LruCache<Key, Value>::getNode(const Key& key) {
-    return nodeHash_[key];
+    auto it = this->nodeHash_.find(key);
+    if(it == this->nodeHash_.end())
+        return nullptr;
+    return it->second;
 }
 
 template<typename Key, typename Value>
@@ -103,10 +104,10 @@ void LruCache<Key, Value>::moveToRecentPosition(const NodePtr& node) {
 
 template<typename Key, typename Value>
 void LruCache<Key, Value>::initializeList() {
-    dummyHead_ = make_shared<Node>(Key(), Value());
-    dummyTail_ = make_shared<Node>(Key(), Value());
-    dummyHead_->setNext(dummyTail_);
-    dummyTail_->setPre(dummyHead_);
+    this->dummyHead_ = make_shared<Node>(Key(), Value());
+    this->dummyTail_ = make_shared<Node>(Key(), Value());
+    this->dummyHead_->setNext(dummyTail_);
+    this->dummyTail_->setPre(dummyHead_);
 }
 
 template<typename Key, typename Value>
@@ -114,8 +115,8 @@ void LruCache<Key, Value>::insertNode(const NodePtr& node) {
     node->setNext(dummyTail_);
     node->setPre(dummyTail_->getPre());
 
-    dummyTail_->getPre()->setNext(node);
-    dummyTail_->setPre(node);
+    this->dummyTail_->getPre()->setNext(node);
+    this->dummyTail_->setPre(node);
 }
 
 template<typename Key, typename Value>
@@ -133,17 +134,17 @@ void LruCache<Key, Value>::updateExitingNode(const NodePtr& node, const Value& v
 
 template<typename Key, typename Value>
 void LruCache<Key, Value>::evictLeastAccessNode() {
-    NodePtr leastNode = dummyHead_->getNext();
+    NodePtr leastNode = this->dummyHead_->getNext();
     removeNode(leastNode);
-    nodeHash_.erase(leastNode->getKey());
+    this->nodeHash_.erase(leastNode->getKey());
 }
 
 template<typename Key, typename Value>
 void LruCache<Key, Value>::addNewNode(const Key& key, const Value& value) {
-    if (nodeHash_.size() >= this->capacity_) {
+    if (this->nodeHash_.size() >= this->capacity_) {
         evictLeastAccessNode();
     }
     NodePtr newNode = make_shared<Node>(key, value);
     insertNode(newNode);
-    nodeHash_[key] = newNode;
+    this->nodeHash_.emplace(key, newNode);
 }

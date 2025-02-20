@@ -41,6 +41,9 @@ void NodeList<Key, Value>::removeNode(const NodePtr& node) {
 	node->getNext()->setPre(node->getPre());
 }
 
+
+//this may return dummyHead
+//it is need to optimize the logic of function
 template<typename Key, typename Value>
 typename NodeList<Key, Value>::NodePtr NodeList<Key, Value>::getLeastNode() {
 	return this->dummyTail_->getPre();

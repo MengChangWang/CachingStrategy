@@ -28,7 +28,7 @@ LruKCache<Key, Value>::LruKCache(unsigned int capacity, unsigned int historyCapa
 
 template<typename Key, typename Value>
 optional<Value> LruKCache<Key, Value>::get(const Key& key) {
-    if (this->historyList_->isExit(key)) {
+    if (this->historyList_->isExists(key)) {
         if (isGreaterThanK(key))
             putIntoLruCache(key, historyList_->get(key).value());
     }
@@ -38,7 +38,7 @@ optional<Value> LruKCache<Key, Value>::get(const Key& key) {
 
 template<typename Key, typename Value>
 void LruKCache<Key, Value>::put(const Key& key,const Value& value) {
-    if (this->historyList_->isExit(key) == false) {
+    if (this->historyList_->isExists(key) == false) {
         this->historyList_->put(key, value);
         return;
     }
