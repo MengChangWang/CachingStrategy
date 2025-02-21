@@ -16,6 +16,7 @@
 #include "UseTemplate\LRU\LruKCache.h"
 #include "UseTemplate\LRU\SliceLruCache.h"
 #include "UseTemplate\LFU\LfuCache.h"
+#include "UseTemplate\LFU\AgingLfuCache.h"
 
 class Timer {
 public:
@@ -48,16 +49,17 @@ void test() {
 #ifdef TEST
     const unsigned int CAPACITY = 10;
 #else
-    const unsigned int CAPACITY = 1000;
+    const unsigned int CAPACITY = 100;
 #endif
     LruCache<int, std::string> lru(CAPACITY);
     LruKCache<int, std::string> lru_k(CAPACITY, CAPACITY, 2);
     SliceLruCache<int, std::string> slice_lru(CAPACITY / 10, CAPACITY);
     LfuCache<int, std::string> lfu(CAPACITY);
+    AgingLfuCache<int, std::string> aging_lfu(CAPACITY);
 
-    std::vector<ICachePolicy<int, std::string>*> caches = { &lru,&lru_k,&slice_lru,&lfu};
-    std::vector<int> hits(5, 0);
-    std::vector<int> get_operations(5, 0);
+    std::vector<ICachePolicy<int, std::string>*> caches = { &lru,&lru_k,&slice_lru,&lfu,&aging_lfu};
+    std::vector<int> hits(6, 0);
+    std::vector<int> get_operations(6, 0);
 
     testHotDataAccess(caches, hits, get_operations);
     testLoopPattern(caches, hits, get_operations);
@@ -90,6 +92,9 @@ void printResults(const std::string& testName,
     std::cout << "LFU - 命中率: " << std::fixed << std::setprecision(2)
         << (100.0 * hits[i] / get_operations[i]) << "%" << std::endl;
     i++;
+    std::cout << "Aging_LFU - 命中率: " << std::fixed << std::setprecision(2)
+        << (100.0 * hits[i] / get_operations[i]) << "%" << std::endl;
+    i++;
     std::cout << "ARC - 命中率: " << std::fixed << std::setprecision(2)
         << (100.0 * hits[i] / get_operations[i]) << "%" << std::endl;
 }
@@ -103,9 +108,9 @@ void testHotDataAccess(const std::vector<ICachePolicy<Key, Value>*>& caches, std
     const int HOT_KEYS = 3;
     const int COLD_KEYS = 50;
 #else
-    const int OPERATIONS = 100000;
+    const int OPERATIONS = 10000;
     const int HOT_KEYS = 3;
-    const int COLD_KEYS = 5000;
+    const int COLD_KEYS = 500;
 #endif // DEBUG
 
     std::random_device rd;
@@ -151,7 +156,7 @@ void testLoopPattern(const std::vector<ICachePolicy<Key, Value>*>& caches, std::
     std::cout << "\n=== 测试场景2：循环扫描测试 ===" << std::endl;
 
     const int LOOP_SIZE = 200;
-    const int OPERATIONS = 100000;
+    const int OPERATIONS = 10000;
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -193,7 +198,7 @@ template<typename Key, typename Value>
 void testWorkloadShift(const std::vector<ICachePolicy<Key, Value>*>& caches, std::vector<int>& hits, std::vector<int>& get_operations) {
     std::cout << "\n=== 测试场景3：工作负载剧烈变化测试 ===" << std::endl;
 
-    const int OPERATIONS = 100000;
+    const int OPERATIONS = 10000;
     const int PHASE_LENGTH = OPERATIONS / 5;
 
     std::random_device rd;
