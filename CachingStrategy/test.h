@@ -18,6 +18,10 @@
 #include "UseTemplate\LFU\LfuCache.h"
 #include "UseTemplate\LFU\AgingLfuCache.h"
 
+#include "UseTemplate\ARC\ArcLru.h"
+#include "UseTemplate\ARC\ArcLfu.h"
+
+
 class Timer {
 public:
     Timer();
@@ -57,7 +61,10 @@ void test() {
     LfuCache<int, std::string> lfu(CAPACITY);
     AgingLfuCache<int, std::string> aging_lfu(CAPACITY);
 
-    std::vector<ICachePolicy<int, std::string>*> caches = { &lru,&lru_k,&slice_lru,&lfu,&aging_lfu};
+    ArcLru<int, string> arc_lru(CAPACITY);
+    ArcLru<int, string> arc_lfu(CAPACITY);
+
+    std::vector<ICachePolicy<int, std::string>*> caches = { &lru,&lru_k,&arc_lfu,&lfu,&lru};
     std::vector<int> hits(6, 0);
     std::vector<int> get_operations(6, 0);
 
@@ -141,7 +148,7 @@ void testHotDataAccess(const std::vector<ICachePolicy<Key, Value>*>& caches, std
             }
 
             get_operations[i]++;
-            if (caches[i]->get(key)) {
+            if (caches[i]->isExists(key)) {
                 hits[i]++;
             }
         
@@ -184,7 +191,7 @@ void testLoopPattern(const std::vector<ICachePolicy<Key, Value>*>& caches, std::
             }
 
             get_operations[i]++;
-            if (caches[i]->get(key)) {
+            if (caches[i]->isExists(key)) {
                 hits[i]++;
             }
          
@@ -242,7 +249,7 @@ void testWorkloadShift(const std::vector<ICachePolicy<Key, Value>*>& caches, std
             }
 
             get_operations[i]++;
-            if (caches[i]->get(key)) {
+            if (caches[i]->isExists(key)) {
                 hits[i]++;
             }
 
