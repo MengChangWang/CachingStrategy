@@ -20,6 +20,7 @@
 
 #include "UseTemplate\ARC\ArcLru.h"
 #include "UseTemplate\ARC\ArcLfu.h"
+#include "UseTemplate\ARC\ArcCache.h"
 
 
 class Timer {
@@ -63,8 +64,9 @@ void test() {
 
     ArcLru<int, string> arc_lru(CAPACITY);
     ArcLru<int, string> arc_lfu(CAPACITY);
+    ArcCache<int, string> arc(CAPACITY);
 
-    std::vector<ICachePolicy<int, std::string>*> caches = { &lru,&lru_k,&arc_lfu,&lfu,&lru};
+    std::vector<ICachePolicy<int, std::string>*> caches = { &lru,&lru_k,&slice_lru,&lfu,&aging_lfu,&arc};
     std::vector<int> hits(6, 0);
     std::vector<int> get_operations(6, 0);
 

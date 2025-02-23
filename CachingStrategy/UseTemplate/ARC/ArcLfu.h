@@ -18,7 +18,9 @@ private:
 private:
 	mutex mutex_;
 	NodeHash nodeHash_;
+	NodeHash ghostHash_;
 	FreqHash freqHash_;
+	FreqList ghostList_;
 	unsigned int capacity_;
 	//unsigned int minFreq_;
 
@@ -30,6 +32,9 @@ public:
 	optional<Value> get(const Key&);
 	bool isExists(const Key&);
 	bool remove(const Key&);
+	void increaseCapacity();
+	void decreaseCapacity();
+	bool checkGhost(const Key& key);
 private:
 	void updateNode(const NodePtr&, const Value&);
 	void insertNewNode(const Key&, const NodePtr&);
@@ -39,6 +44,8 @@ private:
 	void removeFromFreqHash(const NodePtr&);
 	void removeFromNodeHash(const NodePtr&);
 	void evictLeastFrequentNode();
+	void insertIntoGhost(const NodePtr node);
+	
 	//void updateMinFreq();
 
 };
@@ -68,7 +75,7 @@ template<typename Key, typename Value>
 void ArcLfu<Key, Value>::updateNode(const NodePtr& node, const Value& value) {
 	node->setValue(value);
 	removeFromFreqHash(node);
-	node->increaseFrequency();
+	node->increaseAccessCount();
 	insertIntoFreqHash(node);
 }
 
@@ -92,7 +99,7 @@ void ArcLfu<Key, Value>::insertNewNode(const Key& key, const NodePtr& node) {
 
 template<typename Key, typename Value>
 void ArcLfu<Key, Value>::insertIntoFreqHash(const NodePtr& node) {
-	const unsigned int index = node->getFrequency();
+	const unsigned int index = node->getAccessCount();
 	auto it = this->freqHash_.find(index);
 	if (it == this->freqHash_.end()) {
 		FreqPtr newFreqPtr = make_shared<FreqList>();
@@ -120,7 +127,7 @@ void ArcLfu<Key, Value>::removeFromNodeHash(const NodePtr& node) {
 
 template<typename Key, typename Value>
 void ArcLfu<Key, Value>::removeFromFreqHash(const NodePtr& node) {
-	unsigned int freq = node->getFrequency();
+	unsigned int freq = node->getAccessCount();
 	auto it = this->freqHash_.find(freq);
 	if (it == this->freqHash_.end())
 		return;
@@ -142,6 +149,30 @@ void ArcLfu<Key, Value>::evictLeastFrequentNode() {
 	/*removeFromNodeHash(node);
 	* freqList->removeNode(node);
 	*/
+}
+
+template<typename Key, typename Value>
+void ArcLfu<Key, Value>::insertIntoGhost(const NodePtr node)
+{
+	if (this->ghostHash_.size() >= this->capacity_) {
+		NodePtr leastGhost = this->ghostList_.getLeastNode();
+		Key key = leastGhost->getKey();
+		this->ghostHash_.erase(key);
+		this->ghostList_.removeNode(node);
+	}
+	this->ghostHash_(node->getKey(), node);
+	this->ghostList_.insertNode(node);
+}
+
+template<typename Key, typename Value>
+bool ArcLfu<Key, Value>::checkGhost(const Key& key)
+{
+	auto it = this->ghostHash_.find(key);
+	if(it == this->ghostHash_.end())
+	return false;
+	this->ghostList_.removeNode(it->second);
+	this->ghostHash_.erase(it);
+	return true;
 }
 
 template<typename Key, typename Value>
@@ -169,4 +200,17 @@ bool ArcLfu<Key, Value>::remove(const Key& key) {
 	NodePtr node = it->second;
 	removeNode(node);
 	return true;
+}
+
+template<typename Key, typename Value>
+void ArcLfu<Key, Value>::increaseCapacity()
+{
+	this->capacity_++;
+}
+
+template<typename Key, typename Value>
+inline void ArcLfu<Key, Value>::decreaseCapacity()
+{
+	if (this->capacity_ >= 1)
+		this->capacity_--;
 }
