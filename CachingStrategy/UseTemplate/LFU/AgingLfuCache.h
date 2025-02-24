@@ -25,14 +25,13 @@ private:
     NodeHash nodeHash_;
     FreqHash freqHash_;
     unsigned int capacity_;
-    //unsigned int minFreq_;
     unsigned int maxAverageFreqNum_;
     unsigned int curAverageFreqNum_;
     unsigned int totalFreqNum_;
 
 public:
     AgingLfuCache() = delete;
-    AgingLfuCache(unsigned int capacity, unsigned int maxAverageFreqNum = 50);
+    AgingLfuCache(unsigned int capacity, unsigned int maxAverageFreqNum = 10);
     ~AgingLfuCache() = default;
 
     void put(const Key& key, const Value& value) override;
@@ -49,7 +48,6 @@ private:
     void removeFromFreqHash(const NodePtr& node);
     void removeFromNodeHash(const NodePtr& node);
     void evictLeastFrequentNode();
-    //void updateMinFreq();
     void increaseTotalFreqNum();
     void decreaseTotalFreqNum(unsigned int freq);
     void handleOverMaxAverageFreqNum();
@@ -104,11 +102,11 @@ void AgingLfuCache<Key, Value>::insertNewNode(const Key& key, const NodePtr& nod
 template<typename Key, typename Value>
 void AgingLfuCache<Key, Value>::insertIntoFreqHash(const NodePtr& node) {
     const unsigned int freq = node->getFrequency();
-    auto it = this->freqHash_.find(freq);
-    if (it == this->freqHash_.end()) {
-        it = this->freqHash_.emplace(freq, std::make_shared<FreqList>()).first;
+    auto& freqList = freqHash_[freq];  // 自动插入 nullptr 若不存在
+    if (!freqList) {
+        freqList = make_shared<FreqList>();
     }
-    it->second->insertNode(node);
+    freqList->insertNode(node);
 }
 
 template<typename Key, typename Value>
@@ -160,28 +158,17 @@ void AgingLfuCache<Key, Value>::evictLeastFrequentNode() {
     }
 }
 
-//template<typename Key, typename Value>
-//void AgingLfuCache<Key, Value>::updateMinFreq() {
-//    this->minFreq_ = UINT_MAX;
-//    for (const auto& pair : this->freqHash_) {
-//        if (!pair.second->isEmpty() && pair.first < minFreq_) {
-//            this->minFreq_ = pair.first;
-//        }
-//    }
-//    if (this->minFreq_ == UINT_MAX) {
-//        this->minFreq_ = 1; // 无节点时重置为默认值
-//    }
-//}
-
 template<typename Key, typename Value>
 std::optional<Value> AgingLfuCache<Key, Value>::get(const Key& key) {
     lock_guard<mutex> lock(mutex_);
-    increaseTotalFreqNum();
+    
 
     auto it = nodeHash_.find(key);
     if (it == nodeHash_.end()) {
         return nullopt;
     }
+
+    increaseTotalFreqNum();
 
     NodePtr node = it->second;
     Value value = node->getValue();
