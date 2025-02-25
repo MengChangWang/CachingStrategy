@@ -24,6 +24,11 @@
     <ClInclude Include="NoTemplate_LRU\BasicLRU.h" />
     <ClInclude Include="NoTemplate_LRU\LRUWithDiffTTL.h" />
     <ClInclude Include="test.h" />
+    <ClInclude Include="UseTemplate\ARC\ArcCache.h" />
+    <ClInclude Include="UseTemplate\ARC\ArcLfu.h" />
+    <ClInclude Include="UseTemplate\ARC\ArcLru.h" />
+    <ClInclude Include="UseTemplate\ARC\ArcNode.h" />
+    <ClInclude Include="UseTemplate\ARC\ArcNodeList.h" />
     <ClInclude Include="UseTemplate\ICachePolicy.h" />
     <ClInclude Include="UseTemplate\LFU\LfuCache.h" />
     <ClInclude Include="UseTemplate\LFU\LfuNode.h" />

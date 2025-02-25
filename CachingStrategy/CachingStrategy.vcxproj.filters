@@ -69,6 +69,21 @@
     <ClInclude Include="UseTemplate\LFU\NodeList.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="UseTemplate\ARC\ArcNode.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UseTemplate\ARC\ArcLfu.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UseTemplate\ARC\ArcLru.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UseTemplate\ARC\ArcNodeList.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UseTemplate\ARC\ArcCache.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
